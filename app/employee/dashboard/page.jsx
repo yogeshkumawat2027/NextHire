@@ -7,7 +7,7 @@ import pool, { logDatabaseError } from "@/lib/db";
 import { connection } from "next/server";
 import { AlertCircle, BriefcaseBusiness } from "lucide-react";
 import JobBrowser from "./JobBrowser";
-import ProfileMenu from "./ProfileMenu";
+import ProfileMenu from "@/app/components/ProfileMenu";
 
 export default function EmployeeDashboard() {
   return (
@@ -73,7 +73,7 @@ async function EmployeeDashboardContent() {
           NextHire
         </Link>
 
-        <ProfileMenu />
+        <ProfileMenu profileHref="/employee/profile" />
       </nav>
 
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-8 sm:py-8">

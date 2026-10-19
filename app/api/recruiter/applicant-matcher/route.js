@@ -56,6 +56,30 @@ export async function POST(request) {
     );
   }
 
+  const cachedApplicationIds = body?.cachedApplicationIds ?? [];
+  const cachedRequiredSkills = body?.cachedRequiredSkills ?? null;
+  if (
+    !Array.isArray(cachedApplicationIds) ||
+    cachedApplicationIds.length > 10000 ||
+    cachedApplicationIds.some(
+      (id) => typeof id !== "string" || !/^[1-9]\d*$/.test(id)
+    ) ||
+    (cachedRequiredSkills !== null &&
+      (!Array.isArray(cachedRequiredSkills) ||
+        cachedRequiredSkills.length > 30 ||
+        cachedRequiredSkills.some(
+          (skill) =>
+            typeof skill !== "string" ||
+            !skill.trim() ||
+            skill.length > 80
+        )))
+  ) {
+    return NextResponse.json(
+      { message: "Saved applicant match data is invalid." },
+      { status: 400 }
+    );
+  }
+
   try {
     const jobResult = await pool.query(
       `SELECT id, title, company, location, job_type, description, skills
@@ -83,10 +107,17 @@ export async function POST(request) {
       [job.id]
     );
 
-    const { requiredSkills, matches } = await matchApplicants(
-      job,
-      applicantResult.rows
+    const cachedIds = new Set(cachedApplicationIds);
+    const newApplicants = applicantResult.rows.filter(
+      (applicant) => !cachedIds.has(String(applicant.application_id))
     );
+
+    const matchResult = newApplicants.length
+      ? await matchApplicants(job, newApplicants, cachedRequiredSkills)
+      : {
+          requiredSkills: cachedRequiredSkills ?? [],
+          matches: [],
+        };
 
     return NextResponse.json({
       job: {
@@ -95,8 +126,11 @@ export async function POST(request) {
         company: job.company,
       },
       applicantCount: applicantResult.rows.length,
-      requiredSkills,
-      matches,
+      currentApplicationIds: applicantResult.rows.map(
+        (applicant) => String(applicant.application_id)
+      ),
+      requiredSkills: matchResult.requiredSkills,
+      matches: matchResult.matches,
     });
   } catch (error) {
     logMatcherError("AI applicant matching failed:", error);

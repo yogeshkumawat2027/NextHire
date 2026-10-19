@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import LogoutButton from "@/app/components/LogoutButton";
+import ProfileMenu from "@/app/components/ProfileMenu";
 import { getCurrentUser } from "@/lib/auth";
 import CandidateMatcher from "../dashboard/CandidateMatcher";
 import { ArrowLeft, BriefcaseBusiness, Sparkles, UserRound } from "lucide-react";
@@ -37,16 +37,7 @@ async function RecruiterCandidateMatchesContent() {
             </span>
             NextHire
           </Link>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/recruiter/profile"
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              <UserRound size={16} aria-hidden="true" />
-              Profile
-            </Link>
-            <LogoutButton />
-          </div>
+          <ProfileMenu profileHref="/recruiter/profile" />
         </div>
       </nav>
 

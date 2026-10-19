@@ -23,43 +23,134 @@ function experienceLabel(value) {
   }[value] || "Not specified";
 }
 
-export default function ApplicantMatcher({ jobId, applicantCount }) {
+function isApplicantMatch(match) {
+  return (
+    match &&
+    typeof match === "object" &&
+    typeof match.applicationId === "string" &&
+    /^[1-9]\d*$/.test(match.applicationId) &&
+    typeof match.candidateId === "string" &&
+    typeof match.name === "string" &&
+    typeof match.email === "string" &&
+    Number.isInteger(match.score) &&
+    match.score >= 0 &&
+    match.score <= 100 &&
+    Array.isArray(match.skills) &&
+    match.skills.every((skill) => typeof skill === "string") &&
+    Array.isArray(match.matchedSkills) &&
+    match.matchedSkills.every((skill) => typeof skill === "string") &&
+    Array.isArray(match.missingSkills) &&
+    match.missingSkills.every((skill) => typeof skill === "string") &&
+    typeof match.explanation === "string"
+  );
+}
+
+function readMatchCache(key) {
+  const stored = window.localStorage.getItem(key);
+  if (!stored) return { matches: [], requiredSkills: null, warning: "" };
+
+  try {
+    const cache = JSON.parse(stored);
+    if (
+      !cache ||
+      cache.version !== 1 ||
+      !Array.isArray(cache.matches) ||
+      !Array.isArray(cache.requiredSkills) ||
+      cache.requiredSkills.length > 30 ||
+      cache.requiredSkills.some(
+        (skill) => typeof skill !== "string" || skill.length > 80
+      )
+    ) {
+      throw new Error("Invalid saved match format");
+    }
+
+    return {
+      matches: cache.matches.filter(isApplicantMatch),
+      requiredSkills: cache.requiredSkills,
+      warning: "",
+    };
+  } catch {
+    window.localStorage.removeItem(key);
+    return {
+      matches: [],
+      requiredSkills: null,
+      warning: "Saved matches could not be read and were cleared.",
+    };
+  }
+}
+
+export default function ApplicantMatcher({ jobId, applicantCount, recruiterId }) {
   const [matching, setMatching] = useState(applicantCount > 0);
   const [matches, setMatches] = useState(
     applicantCount === 0 ? [] : null
   );
   const [requiredSkills, setRequiredSkills] = useState([]);
   const [matchError, setMatchError] = useState("");
+  const [cacheWarning, setCacheWarning] = useState("");
   const matchingStarted = useRef(false);
+  const cacheKey = `nexthire:applicant-matches:v1:${recruiterId}:${jobId}`;
 
   const matchApplicants = useCallback(async () => {
     if (!jobId || applicantCount === 0) return;
     setMatching(true);
-    setMatches(null);
-    setRequiredSkills([]);
     setMatchError("");
 
     try {
+      let cache = { matches: [], requiredSkills: null, warning: "" };
+      try {
+        cache = readMatchCache(cacheKey);
+      } catch {
+        cache.warning = "Browser storage is unavailable; new applicants may be matched again next time.";
+      }
+      setCacheWarning(cache.warning);
+
       const response = await fetch("/api/recruiter/applicant-matcher", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId }),
+        body: JSON.stringify({
+          jobId,
+          cachedApplicationIds: cache.matches.map((match) => match.applicationId),
+          cachedRequiredSkills: cache.requiredSkills,
+        }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(data.message || "Unable to match applicants.");
       }
-      if (!Array.isArray(data.matches) || !Array.isArray(data.requiredSkills)) {
+      if (
+        !Array.isArray(data.matches) ||
+        !Array.isArray(data.requiredSkills) ||
+        !Array.isArray(data.currentApplicationIds)
+      ) {
         throw new Error("Applicant matching returned an invalid response.");
       }
-      setMatches(data.matches);
+
+      const currentIds = new Set(data.currentApplicationIds);
+      const mergedMatches = [
+        ...cache.matches.filter((match) => currentIds.has(match.applicationId)),
+        ...data.matches,
+      ].sort((first, second) => second.score - first.score);
+
+      setMatches(mergedMatches);
       setRequiredSkills(data.requiredSkills);
+      setCacheWarning(cache.warning);
+
+      try {
+        window.localStorage.setItem(cacheKey, JSON.stringify({
+          version: 1,
+          requiredSkills: data.requiredSkills,
+          matches: mergedMatches,
+        }));
+        setCacheWarning("");
+      } catch {
+        setCacheWarning("Matches loaded, but could not be saved in browser storage.");
+      }
     } catch (error) {
       setMatchError(error.message || "Unable to match applicants.");
     } finally {
       setMatching(false);
     }
-  }, [applicantCount, jobId]);
+  }, [applicantCount, cacheKey, jobId]);
 
   useEffect(() => {
     if (applicantCount === 0 || matchingStarted.current) return;
@@ -80,6 +171,12 @@ export default function ApplicantMatcher({ jobId, applicantCount }) {
         <p role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-800">
           <XCircle size={16} aria-hidden="true" className="mr-1 inline" />
           {matchError} Refresh this page to try again.
+        </p>
+      )}
+
+      {cacheWarning && (
+        <p role="status" className="mt-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+          {cacheWarning}
         </p>
       )}
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
 import pool from "@/lib/db";
-import LogoutButton from "@/app/components/LogoutButton";
+import ProfileMenu from "@/app/components/ProfileMenu";
 import { connection } from "next/server";
 import {
   ArrowRight,
@@ -12,7 +12,6 @@ import {
   Building2,
   Plus,
   Sparkles,
-  UserRound,
   UsersRound,
 } from "lucide-react";
 
@@ -47,16 +46,7 @@ async function RecruiterDashboardContent() {
             NextHire
           </Link>
 
-          <div className="flex items-center gap-3">
-            <Link
-              href="/recruiter/profile"
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              <UserRound size={16} aria-hidden="true" />
-              Profile
-            </Link>
-            <LogoutButton />
-          </div>
+          <ProfileMenu profileHref="/recruiter/profile" />
         </div>
       </nav>
 

@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, UserRound } from "lucide-react";
-import LogoutButton from "@/app/components/LogoutButton";
+import LogoutButton from "./LogoutButton";
 
-export default function ProfileMenu() {
+export default function ProfileMenu({ profileHref }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -53,7 +53,7 @@ export default function ProfileMenu() {
       {open && (
         <div className="absolute right-0 z-20 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
           <Link
-            href="/employee/profile"
+            href={profileHref}
             onClick={() => setOpen(false)}
             className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
@@ -61,7 +61,7 @@ export default function ProfileMenu() {
             View Profile
           </Link>
           <div className="border-t border-slate-100 pt-2">
-            <LogoutButton className="inline-flex w-full items-center justify-start gap-2 rounded-lg border-0 bg-transparent px-3 py-2 text-sm font-medium text-slate-700 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-60" />
+            <LogoutButton className="inline-flex w-full cursor-pointer items-center justify-start gap-2 rounded-lg border-0 bg-transparent px-3 py-2 text-sm font-medium text-slate-700 hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-60" />
           </div>
         </div>
       )}

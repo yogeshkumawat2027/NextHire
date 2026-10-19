@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import LogoutButton from "@/app/components/LogoutButton";
+import ProfileMenu from "@/app/components/ProfileMenu";
 import { getCurrentUser } from "@/lib/auth";
 import pool from "@/lib/db";
 import {
@@ -45,7 +45,7 @@ async function RecruiterProfileContent() {
             </span>
             NextHire
           </Link>
-          <LogoutButton />
+          <ProfileMenu profileHref="/recruiter/profile" />
         </div>
       </nav>
 
